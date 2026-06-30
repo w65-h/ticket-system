@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ticket.mapper.TicketMapper">
+
+    <select id="selectTicketPage" resultType="com.ticket.entity.Ticket">
+        SELECT t.*, u.real_name AS creatorName, u2.real_name AS assigneeName, d.dept_name AS deptName
+        FROM ticket t
+        LEFT JOIN sys_user u ON t.creator_id = u.id
+        LEFT JOIN sys_user u2 ON t.assignee_id = u2.id
+        LEFT JOIN sys_dept d ON t.dept_id = d.id
+        WHERE t.deleted = 0
+        <if test="query.ticketNo != null and query.ticketNo != ''">
+            AND t.ticket_no LIKE CONCAT('%', #{query.ticketNo}, '%')
+        </if>
+        <if test="query.title != null and query.title != ''">
+            AND t.title LIKE CONCAT('%', #{query.title}, '%')
+        </if>
+        <if test="query.status != null">
+            AND t.status = #{query.status}
+        </if>
+        <if test="query.priority != null">
+            AND t.priority = #{query.priority}
+        </if>
+        <if test="query.assigneeId != null">
+            AND t.assignee_id = #{query.assigneeId}
+        </if>
+        <if test="query.deptId != null">
+            AND t.dept_id = #{query.deptId}
+        </if>
+        <if test="query.startTime != null and query.startTime != ''">
+            AND t.create_time &gt;= #{query.startTime}
+        </if>
+        <if test="query.endTime != null and query.endTime != ''">
+            AND t.create_time &lt;= #{query.endTime}
+        </if>
+        <if test="deptIds != null and deptIds.size() > 0">
+            AND t.dept_id IN
+            <foreach collection="deptIds" item="deptId" open="(" separator="," close=")">
+                #{deptId}
+            </foreach>
+        </if>
+        ORDER BY t.create_time DESC
+    </select>
+
+    <select id="selectDeptStats" resultType="com.ticket.vo.DeptStatVO">
+        SELECT
+            d.id AS deptId,
+            d.dept_name AS deptName,
+            COUNT(t.id) AS totalCount,
+            SUM(CASE WHEN t.status = 4 THEN 1 ELSE 0 END) AS completedCount,
+            ROUND(AVG(CASE WHEN t.status = 4 THEN TIMESTAMPDIFF(HOUR, t.create_time, t.finish_time) END), 2) AS avgHours
+        FROM sys_dept d
+        LEFT JOIN ticket t ON d.id = t.dept_id AND t.deleted = 0
+        WHERE d.deleted = 0
+        GROUP BY d.id, d.dept_name
+        ORDER BY totalCount DESC
+    </select>
+
+    <select id="selectDayTrend" resultType="com.ticket.vo.DayTrendVO">
+        WITH RECURSIVE date_series AS (
+            SELECT CURDATE() - INTERVAL #{days} DAY AS dt
+            UNION ALL
+            SELECT dt + INTERVAL 1 DAY FROM date_series WHERE dt &lt; CURDATE()
+        )
+        SELECT
+            ds.dt AS date,
+            COALESCE(created.cnt, 0) AS createCount,
+            COALESCE(completed.cnt, 0) AS completeCount
+        FROM date_series ds
+        LEFT JOIN (
+            SELECT
+                DATE(create_time) AS d,
+                COUNT(*) AS cnt
+            FROM ticket
+            WHERE deleted = 0
+              AND create_time >= CURDATE() - INTERVAL #{days} DAY
+            GROUP BY DATE(create_time)
+        ) created ON ds.dt = created.d
+        LEFT JOIN (
+            SELECT
+                DATE(finish_time) AS d,
+                COUNT(*) AS cnt
+            FROM ticket
+            WHERE deleted = 0
+              AND status = 4
+              AND finish_time >= CURDATE() - INTERVAL #{days} DAY
+            GROUP BY DATE(finish_time)
+        ) completed ON ds.dt = completed.d
+        ORDER BY ds.dt
+    </select>
+
+</mapper>

@@ -1,0 +1,32 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Node / Frontend
+node_modules/
+dist/
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Database
+dump.rdb
+*.db
+*.sqlite
+
+# Env
+.env
+.env.local
+.env.*.local

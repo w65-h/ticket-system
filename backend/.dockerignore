@@ -1,0 +1,8 @@
+target/
+!target/ticket-system-1.0.0.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.log
+.idea/
+*.iml
