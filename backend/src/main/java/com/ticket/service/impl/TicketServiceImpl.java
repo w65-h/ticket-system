@@ -17,6 +17,7 @@ import com.ticket.mapper.NotificationMapper;
 import com.ticket.mapper.TicketMapper;
 import com.ticket.mapper.TicketRecordMapper;
 import com.ticket.mapper.UserMapper;
+import com.ticket.security.JwtTokenProvider;
 import com.ticket.service.DepartmentService;
 import com.ticket.service.TicketService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +26,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -52,14 +56,13 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
     @Resource
     private RabbitTemplate rabbitTemplate;
 
+    @Resource
+    private JwtTokenProvider jwtTokenProvider;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Ticket createTicket(TicketCreateDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        User creator = userMapper.selectOne(
-                new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        User creator = getCurrentUser();
 
         Ticket ticket = new Ticket();
         ticket.setTicketNo(generateTicketNo());
@@ -95,11 +98,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
 
     @Override
     public Page<Ticket> queryTickets(TicketQueryDTO query) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        User currentUser = userMapper.selectOne(
-                new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        User currentUser = getCurrentUser();
 
         List<Long> deptIds = departmentService.getSubDeptIds(currentUser.getDeptId());
 
@@ -110,11 +109,7 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(TicketStatusDTO dto) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-
-        User operator = userMapper.selectOne(
-                new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        User operator = getCurrentUser();
 
         Ticket ticket = getById(dto.getTicketId());
         if (ticket == null) {
@@ -178,6 +173,30 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
         } catch (Exception e) {
             log.error("发送通知失败: ticketNo={}, error={}", ticketNo, e.getMessage());
         }
+    }
+
+    private User getCurrentUser() {
+        String token = resolveToken();
+        if (token != null) {
+            Long userId = jwtTokenProvider.getUserIdFromToken(token);
+            return userMapper.selectById(userId);
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return userMapper.selectOne(
+                new LambdaQueryWrapper<User>()
+                        .eq(User::getUsername, auth.getName()));
+    }
+
+    private String resolveToken() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            HttpServletRequest request = attributes.getRequest();
+            String bearerToken = request.getHeader("Authorization");
+            if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+                return bearerToken.substring(7);
+            }
+        }
+        return null;
     }
 
     private String getStatusOperation(Integer status) {

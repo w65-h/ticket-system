@@ -1,6 +1,7 @@
-package com.ticket.config;
+package com.ticket.listener;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.ticket.config.RabbitMQConfig;
 import com.ticket.entity.Notification;
 import com.ticket.mapper.NotificationMapper;
 import com.rabbitmq.client.Channel;
@@ -27,14 +28,12 @@ public class TicketNotificationListener {
 
         try {
             log.info("处理工单状态变更通知: ticketNo={}, notificationId={}", ticketNo, notificationId);
-            // 模拟实际通知发送（短信/邮件/站内信推送）
             Thread.sleep(100);
 
             channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
             log.error("通知处理失败: notificationId={}, error={}", notificationId, e.getMessage());
             try {
-                // 拒绝消息，不重新入队，让其进入死信队列
                 channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
             } catch (IOException ex) {
                 log.error("拒绝消息失败", ex);
@@ -81,7 +80,6 @@ public class TicketNotificationListener {
         } catch (Exception e) {
             log.error("死信队列重试仍失败: notificationId={}, error={}", notificationId, e.getMessage());
             try {
-                // 再次拒绝，重新回到死信队列
                 channel.basicReject(message.getMessageProperties().getDeliveryTag(), false);
             } catch (IOException ex) {
                 log.error("拒绝死信消息失败", ex);

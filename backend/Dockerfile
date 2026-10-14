@@ -1,10 +1,24 @@
-FROM eclipse-temurin:11-jre
-
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# syntax=docker/dockerfile:1
+FROM maven:3.9-eclipse-temurin-11 AS builder
 
 WORKDIR /app
 
-COPY target/ticket-system-1.0.0.jar app.jar
+COPY settings.xml /root/.m2/settings.xml
+COPY pom.xml .
+
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:3.6.1:go-offline
+
+COPY src ./src
+
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -B -e package -DskipTests
+
+FROM eclipse-temurin:11-jre-alpine
+
+WORKDIR /app
+
+COPY --from=builder /app/target/ticket-system-1.0.0.jar app.jar
 
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 

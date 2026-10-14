@@ -54,9 +54,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import * as echarts from 'echarts'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import * as echarts from 'echarts/core'
+import { PieChart, BarChart, LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
 import { getDashboard } from '../../api/dashboard'
+
+echarts.use([PieChart, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer])
 
 const data = ref({
   totalTickets: 0, pendingTickets: 0, processingTickets: 0,

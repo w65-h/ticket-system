@@ -16,8 +16,4 @@ public interface PermissionMapper extends BaseMapper<Permission> {
             "WHERE ur.user_id = #{userId} AND p.deleted = 0")
     List<Permission> selectPermissionsByUserId(Long userId);
 
-    @Select("SELECT DISTINCT p.* FROM sys_permission p " +
-            "INNER JOIN sys_role_permission rp ON p.id = rp.perm_id " +
-            "WHERE rp.role_id = #{roleId} AND p.deleted = 0")
-    List<Permission> selectPermissionsByRoleId(Long roleId);
-}
+    }

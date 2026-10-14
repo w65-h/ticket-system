@@ -2,13 +2,18 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+import {
+  DataAnalysis, Tickets, Setting,
+  Fold, Expand,
+  UserFilled, ArrowDown
+} from '@element-plus/icons-vue'
 import App from './App.vue'
 import router from './router'
 
 const app = createApp(App)
 
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+const icons = { DataAnalysis, Tickets, Setting, Fold, Expand, UserFilled, ArrowDown }
+for (const [key, component] of Object.entries(icons)) {
   app.component(key, component)
 }
 

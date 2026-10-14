@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class DashboardServiceImpl implements DashboardService {
@@ -24,30 +25,42 @@ public class DashboardServiceImpl implements DashboardService {
     public DashboardVO getDashboardData() {
         DashboardVO vo = new DashboardVO();
 
-        vo.setTotalTickets(ticketMapper.selectTotalCount());
-        vo.setPendingTickets(ticketMapper.selectCountByStatus(1));
-        vo.setProcessingTickets(ticketMapper.selectCountByStatus(2));
-        vo.setCompletedTickets(ticketMapper.selectCountByStatus(4));
-        vo.setRejectedTickets(ticketMapper.selectCountByStatus(5));
+        Map<Integer, Long> statusCountMap = ticketMapper.selectStatusCounts().stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row.get("status")).intValue(),
+                        row -> ((Number) row.get("cnt")).longValue()));
+
+        long pending = statusCountMap.getOrDefault(1, 0L);
+        long processing = statusCountMap.getOrDefault(2, 0L);
+        long verifying = statusCountMap.getOrDefault(3, 0L);
+        long completed = statusCountMap.getOrDefault(4, 0L);
+        long rejected = statusCountMap.getOrDefault(5, 0L);
+        long total = pending + processing + verifying + completed + rejected;
+
+        vo.setTotalTickets(total);
+        vo.setPendingTickets(pending);
+        vo.setProcessingTickets(processing);
+        vo.setCompletedTickets(completed);
+        vo.setRejectedTickets(rejected);
 
         Double avg = ticketMapper.selectAvgProcessHours();
         vo.setAvgProcessHours(avg != null ? Math.round(avg * 100.0) / 100.0 : 0);
 
-        vo.setStatusStats(buildStatusStats(vo));
+        vo.setStatusStats(buildStatusStats(total, pending, processing, verifying, completed, rejected));
         vo.setDeptStats(ticketMapper.selectDeptStats());
         vo.setDayTrend(ticketMapper.selectDayTrend(30));
 
         return vo;
     }
 
-    private List<StatusStatVO> buildStatusStats(DashboardVO vo) {
-        long total = vo.getTotalTickets();
+    private List<StatusStatVO> buildStatusStats(long total, long pending, long processing,
+                                                 long verifying, long completed, long rejected) {
         Map<String, Long> map = new LinkedHashMap<>();
-        map.put("待处理", vo.getPendingTickets());
-        map.put("处理中", vo.getProcessingTickets());
-        map.put("待验收", ticketMapper.selectCountByStatus(3));
-        map.put("已完成", vo.getCompletedTickets());
-        map.put("已驳回", vo.getRejectedTickets());
+        map.put("待处理", pending);
+        map.put("处理中", processing);
+        map.put("待验收", verifying);
+        map.put("已完成", completed);
+        map.put("已驳回", rejected);
 
         List<StatusStatVO> stats = new ArrayList<>();
         for (Map.Entry<String, Long> entry : map.entrySet()) {

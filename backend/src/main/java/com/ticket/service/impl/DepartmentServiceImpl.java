@@ -84,12 +84,18 @@ public class DepartmentServiceImpl extends ServiceImpl<DepartmentMapper, Departm
     }
 
     private void collectSubDeptIds(Long deptId, List<Long> result) {
-        List<Department> children = list(new LambdaQueryWrapper<Department>()
-                .eq(Department::getParentId, deptId)
-                .eq(Department::getStatus, 1));
-        for (Department child : children) {
-            result.add(child.getId());
-            collectSubDeptIds(child.getId(), result);
+        List<Department> allDepts = list(new LambdaQueryWrapper<Department>()
+                .eq(Department::getStatus, 1)
+                .select(Department::getId, Department::getParentId));
+        collectSubDeptIdsFromList(deptId, allDepts, result);
+    }
+
+    private void collectSubDeptIdsFromList(Long deptId, List<Department> allDepts, List<Long> result) {
+        for (Department child : allDepts) {
+            if (child.getParentId() != null && child.getParentId().equals(deptId)) {
+                result.add(child.getId());
+                collectSubDeptIdsFromList(child.getId(), allDepts, result);
+            }
         }
     }
 }

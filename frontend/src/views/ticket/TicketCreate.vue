@@ -51,6 +51,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createTicket } from '../../api/ticket'
 import { getDeptTree } from '../../api/dept'
+import { getUserList } from '../../api/user'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -84,7 +85,11 @@ const handleSubmit = async () => {
 }
 
 onMounted(async () => {
-  const res = await getDeptTree()
-  deptTree.value = res.data || []
+  const [deptRes, userRes] = await Promise.all([
+    getDeptTree(),
+    getUserList()
+  ])
+  deptTree.value = deptRes.data || []
+  users.value = userRes.data || []
 })
 </script>

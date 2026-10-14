@@ -3,6 +3,7 @@ package com.ticket.controller;
 import com.ticket.common.Result;
 import com.ticket.entity.Department;
 import com.ticket.service.DepartmentService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -26,12 +27,14 @@ public class DepartmentController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<?> save(@RequestBody Department department) {
         departmentService.saveOrUpdate(department);
         return Result.ok();
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<?> delete(@PathVariable Long id) {
         departmentService.removeById(id);
         return Result.ok();

@@ -19,5 +19,5 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 jwt:
-  secret: ticket-system-jwt-secret-key-2024-prod
+  secret: ${JWT_SECRET:ticket-system-jwt-secret-key-2024-prod}
   expiration: 86400000

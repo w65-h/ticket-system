@@ -30,3 +30,10 @@ dump.rdb
 .env
 .env.local
 .env.*.local
+
+# Documents
+*.docx
+~$*
+
+# Temp scripts
+generate_report.py
