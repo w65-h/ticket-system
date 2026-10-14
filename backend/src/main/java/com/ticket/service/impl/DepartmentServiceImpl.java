@@ -10,9 +10,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -64,7 +66,9 @@ public class DepartmentServiceImpl extends ServiceImpl<DepartmentMapper, Departm
         String cacheKey = DEPT_CHILDREN_KEY + deptId;
         Object cached = redisTemplate.opsForValue().get(cacheKey);
         if (cached != null) {
-            return (List<Long>) cached;
+            return ((List<?>) cached).stream()
+                    .map(o -> ((Number) o).longValue())
+                    .collect(Collectors.toList());
         }
 
         List<Long> result = new ArrayList<>();
@@ -96,6 +100,42 @@ public class DepartmentServiceImpl extends ServiceImpl<DepartmentMapper, Departm
                 result.add(child.getId());
                 collectSubDeptIdsFromList(child.getId(), allDepts, result);
             }
+        }
+    }
+
+    @Override
+    public boolean save(Department entity) {
+        boolean result = super.save(entity);
+        clearDeptCache();
+        return result;
+    }
+
+    @Override
+    public boolean updateById(Department entity) {
+        boolean result = super.updateById(entity);
+        clearDeptCache();
+        return result;
+    }
+
+    @Override
+    public boolean saveOrUpdate(Department entity) {
+        boolean result = super.saveOrUpdate(entity);
+        clearDeptCache();
+        return result;
+    }
+
+    @Override
+    public boolean removeById(Serializable id) {
+        boolean result = super.removeById(id);
+        clearDeptCache();
+        return result;
+    }
+
+    private void clearDeptCache() {
+        redisTemplate.delete(DEPT_TREE_KEY);
+        Set<String> childKeys = redisTemplate.keys(DEPT_CHILDREN_KEY + "*");
+        if (CollUtil.isNotEmpty(childKeys)) {
+            redisTemplate.delete(childKeys);
         }
     }
 }

@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM maven:3.9-eclipse-temurin-11 AS builder
 
 WORKDIR /app
@@ -6,15 +5,15 @@ WORKDIR /app
 COPY settings.xml /root/.m2/settings.xml
 COPY pom.xml .
 
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:3.6.1:go-offline
+RUN mvn -B -e org.apache.maven.plugins:maven-dependency-plugin:3.6.1:go-offline
 
 COPY src ./src
 
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -B -e package -DskipTests
+RUN mvn -B -e package -DskipTests
 
 FROM eclipse-temurin:11-jre-alpine
+
+RUN apk add --no-cache curl tzdata
 
 WORKDIR /app
 
